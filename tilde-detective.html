@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>La tilde detective · 6.º de Primaria</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#eef7f4;color:#211b42;font:1rem/1.55 system-ui,sans-serif}
+main{max-width:46rem;margin:auto;padding:clamp(.75rem,4vw,2rem)}
+header{background:#194e48;color:white;padding:clamp(1rem,5vw,2rem);border-radius:1.5rem;position:relative;overflow:hidden}
+header::after{content:"";position:absolute;width:12rem;height:12rem;right:-5rem;top:-6rem;border:1.5rem solid #ffffff25;border-radius:50%;pointer-events:none}
+header p{margin:.35rem 0}
+h1{font-size:clamp(2rem,7vw,3.25rem);line-height:1.05;margin:.4rem 0}
+h2{font-size:clamp(1.35rem,4vw,1.8rem);line-height:1.25;margin:.65rem 0 1rem}
+section{background:white;margin-top:1rem;padding:clamp(1rem,4vw,1.7rem);border-radius:1.5rem;box-shadow:0 6px 24px #2c206314}
+.stats{display:flex;flex-wrap:wrap;justify-content:space-between;gap:.5rem;font-weight:700}
+progress{width:100%;height:.8rem;accent-color:#5933bd;margin:.7rem 0 1rem}
+.tag{display:inline-block;background:#ede4ff;color:#472688;padding:.2rem .7rem;border-radius:2rem;font-weight:750}
+.answers{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.65rem}
+button{font:inherit;font-weight:700;min-height:48px;border:2px solid #b8addb;border-radius:.8rem;padding:.55rem .9rem;background:#f8f6ff;color:#25194d;cursor:pointer}
+button:hover:not([aria-disabled="true"]){background:#eae1ff}
+button[aria-disabled="true"]{cursor:default}
+button[data-result="bien"]{background:#d9f5e6;border-color:#247349;color:#164a31}
+button[data-result="mal"]{background:#ffebef;border-color:#a13850;color:#781f35}
+button.primary{background:#235e54;color:white;border-color:#235e54}
+button.primary:hover{background:#17463e}
+:focus-visible{outline:3px solid #231064;outline-offset:4px}
+#feedback:not(:empty){margin:1rem 0;padding:.75rem 1rem;background:#f0edfa;border-radius:.8rem}
+#actions{margin-top:1rem}
+details{margin-top:1.1rem}
+summary{cursor:pointer;padding:.6rem 0;font-weight:750}
+</style>
+</head>
+<body>
+<main>
+<header>
+<p>Lengua · 6.º de Primaria</p>
+<h1>La tilde detective</h1>
+<p>Elige la palabra que completa cada frase. Cada acierto vale 1 punto.</p>
+</header>
+<section aria-label="Partida">
+<div class="stats"><span id="round"></span><span id="score"></span></div>
+<progress id="progress" aria-label="Retos respondidos" max="8" value="0"></progress>
+<div><span class="tag" id="topic"></span></div>
+<h2 id="question" tabindex="-1"></h2>
+<div id="answers" class="answers" role="group" aria-labelledby="question"></div>
+<div id="feedback" role="status" aria-atomic="true"></div>
+<div id="actions" hidden><button class="primary" id="next" type="button"></button></div>
+<details id="help">
+<summary>Consultar la regla</summary>
+<p>Los monosílabos generalmente se escriben sin tilde. La <strong>tilde diacrítica</strong> distingue algunas palabras que se escriben igual y cumplen funciones distintas. Por ejemplo, «tú» se refiere a una persona y «tu» indica posesión, como en «tu mochila».</p>
+</details>
+</section>
+<noscript>Activa JavaScript en tu navegador para jugar.</noscript>
+</main>
+<script>
+const questions = [
+  ["tú / tu","¿___ vienes a la biblioteca?",["Tu","Tú"],"Tú","«Tú» es un pronombre personal. Se refiere a la persona con la que hablamos."],
+  ["él / el","Dejé el estuche sobre ___ escritorio.",["el","él"],"el","«El» es el artículo que acompaña a «escritorio»."],
+  ["mí / mi","Este regalo es para ___.",["mi","mí"],"mí","«Mí» es un pronombre personal. Aquí aparece después de «para»."],
+  ["sí / si","___ llueve, jugaremos dentro.",["Si","Sí"],"Si","«Si» introduce una condición. Jugaremos dentro en caso de que llueva."],
+  ["té / te","Mi abuela toma ___ con limón.",["té","te"],"té","«Té» lleva tilde cuando se refiere a la bebida."],
+  ["sé / se","Lucía ___ lava las manos.",["sé","se"],"se","«Se» acompaña a «lava». «Sé» con tilde puede significar «yo sé»."],
+  ["dé / de","Espero que me ___ tiempo para terminar.",["de","dé"],"dé","«Dé» es una forma del verbo «dar»."],
+  ["más / mas","Quiero un poco ___ de agua.",["más","mas"],"más","«Más» indica cantidad. «Mas», sin tilde, significa «pero»."]
+];
+const ui = Object.fromEntries(['round','score','progress','topic','question','answers','feedback','actions','next','help'].map(id => [id, document.getElementById(id)]));
+let index = 0;
+let points = 0;
+let answered = false;
+function updateScore() {
+  ui.score.textContent = 'Puntuación: ' + points + ' de ' + questions.length;
+}
+function showQuestion(moveFocus = false) {
+  const [topic, question, options, correct, explanation] = questions[index];
+  answered = false;
+  ui.progress.value = index;
+  ui.round.textContent = 'Reto ' + (index + 1) + ' de ' + questions.length;
+  updateScore();
+  ui.topic.hidden = false;
+  ui.topic.textContent = topic;
+  ui.topic.dataset.topic = topic;
+  ui.question.textContent = question;
+  ui.feedback.textContent = '';
+  ui.answers.hidden = false;
+  ui.answers.replaceChildren();
+  options.forEach(option => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = option;
+    button.addEventListener('click', () => {
+      if (answered) return;
+      answered = true;
+      const hit = option === correct;
+      if (hit) points++;
+      updateScore();
+      ui.progress.value = index + 1;
+      [...ui.answers.children].forEach(choice => {
+        choice.setAttribute('aria-disabled', 'true');
+        choice.tabIndex = -1;
+        if (choice.textContent === String(correct)) choice.dataset.result = 'bien';
+      });
+      if (!hit) button.dataset.result = 'mal';
+      ui.feedback.textContent = (hit ? '¡Correcto! +1 punto. ' : 'La respuesta correcta es «' + correct + '». ') + explanation;
+      ui.next.textContent = index === questions.length - 1 ? 'Ver resultado' : 'Siguiente reto';
+      ui.actions.hidden = false;
+    });
+    ui.answers.append(button);
+  });
+  ui.actions.hidden = true;
+  ui.help.hidden = false;
+  ui.help.open = false;
+  if (moveFocus) ui.question.focus();
+}
+ui.next.addEventListener('click', () => {
+  if (index === questions.length) {
+    index = 0;
+    points = 0;
+    showQuestion(true);
+    return;
+  }
+  index++;
+  if (index < questions.length) {
+    showQuestion(true);
+    return;
+  }
+  ui.round.textContent = 'Partida terminada';
+  ui.topic.hidden = true;
+  ui.answers.replaceChildren();
+  ui.answers.hidden = true;
+  ui.help.hidden = true;
+  ui.question.textContent = 'Has acertado ' + points + ' de ' + questions.length + ' retos';
+  ui.feedback.textContent = points === questions.length ? '¡Pleno de aciertos!' : 'Puedes volver a jugar para practicar.';
+  ui.next.textContent = 'Volver a jugar';
+  ui.question.focus();
+});
+showQuestion();
+</script>
+</body>
+</html>
